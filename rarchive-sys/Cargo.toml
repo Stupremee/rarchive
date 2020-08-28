@@ -1,11 +1,9 @@
 [package]
-name = "rarchive"
+name = "rarchive-sys"
 version = "0.1.0"
 authors = ["Justus K <justus.k@protonmail.com>"]
 edition = "2018"
-license = "Zlib"
+build = "build.rs"
 
-[workspace]
-members = ["rarchive-sys"]
-
-[dependencies]
+[build-dependencies]
+bindgen = "0.55.1"
