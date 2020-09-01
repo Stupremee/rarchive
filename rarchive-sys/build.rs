@@ -40,14 +40,28 @@ fn main() {
         || target.contains("musl")
     {
         // Build libarchive and generate the rust bindings using bindgen.
-        build_source(&mut cc, &target);
+        build_source(&mut cc);
         return generate_bindings();
     }
 
     panic!("unable to link libarchive");
 }
 
-fn build_source(cc: &mut cc::Build, target: &str) {}
+fn build_source(cc: &mut cc::Build) {
+    let dest = PathBuf::from(env::var_os("OUT_DIR").unwrap());
+    let build = dest.join("build");
+
+    cc.warnings(false)
+        .out_dir(&build)
+        .include("src/libarchive/libarchive");
+
+    let files = glob::glob("src/libarchive/libarchive/*.c")
+        .expect("failed to get source files")
+        .into_iter()
+        .map(|path| path.expect("failed to get source file"));
+
+    cc.files(files).compile("archive")
+}
 
 #[cfg(not(target_env = "msvc"))]
 fn try_vcpkg() -> bool {
