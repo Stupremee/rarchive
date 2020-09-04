@@ -1,4 +1,0 @@
-[submodule "rarchive-sys/src/libarchive"]
-	path = rarchive-sys/src/libarchive
-	url = https://github.com/libarchive/libarchive
-	branch = 3.4

@@ -9,4 +9,4 @@ license = "Zlib"
 members = ["rarchive-sys"]
 
 [dependencies]
-rarchive-sys = { path = "./rarchive-sys" }
+rarchive-sys = { path = "./rarchive-sys", features = ["static"] }
