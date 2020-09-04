@@ -27,10 +27,8 @@ fn main() {
     }
 
     if target.contains("msvc") && try_vcpkg() {
-        return;
+        return generate_bindings();
     }
-
-    let mut cc = cc::Build::new();
 
     // Build libarchive from source and statically link it.
     if target.contains("msvc")
@@ -40,27 +38,23 @@ fn main() {
         || target.contains("musl")
     {
         // Build libarchive and generate the rust bindings using bindgen.
-        build_source(&mut cc);
+        build_source();
         return generate_bindings();
     }
 
     panic!("unable to link libarchive");
 }
 
-fn build_source(cc: &mut cc::Build) {
-    let dest = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    let build = dest.join("build");
+fn build_source() {
+    let dst = cmake::Config::new("src/libarchive")
+        .define("ENABLE_CPIO", "false")
+        .define("ENABLE_TAR", "false")
+        .define("ENABLE_CAT", "false")
+        .define("ENABLE_TEST", "false")
+        .build();
 
-    cc.warnings(false)
-        .out_dir(&build)
-        .include("src/libarchive/libarchive");
-
-    let files = glob::glob("src/libarchive/libarchive/*.c")
-        .expect("failed to get source files")
-        .into_iter()
-        .map(|path| path.expect("failed to get source file"));
-
-    cc.files(files).compile("archive")
+    println!("cargo:rustc-link-search=native={}", dst.display());
+    println!("cargo:rustc-link-lib=static=archive");
 }
 
 #[cfg(not(target_env = "msvc"))]
