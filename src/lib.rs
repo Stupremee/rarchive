@@ -9,6 +9,9 @@ pub use archive_read::*;
 mod archive_write;
 pub use archive_write::*;
 
+pub mod error;
+pub use error::{Error, Result};
+
 /// Representing every possible filter that is available to read / write
 /// from / to.
 ///

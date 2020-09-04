@@ -12,3 +12,10 @@
 #![allow(non_snake_case)]
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+
+pub const ARCHIVE_EOF: i32 = 1;
+pub const ARCHIVE_OK: i32 = 0;
+pub const ARCHIVE_RETRY: i32 = -10;
+pub const ARCHIVE_WARN: i32 = -20;
+pub const ARCHIVE_FAILED: i32 = -25;
+pub const ARCHIVE_FATAL: i32 = -30;

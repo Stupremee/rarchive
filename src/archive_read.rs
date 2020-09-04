@@ -1,10 +1,11 @@
-use crate::{Filter, Format};
+use crate::{Error, Filter, Format, Result};
 use rarchive_sys::archive;
+use std::{ffi::CString, path::Path};
 
 /// The `ReadArchive` is used to read entries from an archive.
 #[derive(Debug, Clone)]
 pub struct ReadArchive {
-    inner: *mut archive,
+    pub(crate) inner: *mut archive,
 }
 
 impl ReadArchive {
@@ -66,6 +67,30 @@ impl ReadArchive {
         };
 
         unsafe { action(self.inner) };
+    }
+
+    /// Opens the given file for this archive.
+    ///
+    /// This method has to be called before any operation can be done.
+    pub fn open<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+        const DEFAULT_BLOCKSIZE: u64 = 10240;
+
+        let path = path.as_ref().to_str().expect("path has to be valid utf-8");
+        let raw_path = CString::new(path).expect("failed to create path");
+
+        let result = unsafe {
+            rarchive_sys::archive_read_open_filename(
+                self.inner,
+                raw_path.as_ptr(),
+                DEFAULT_BLOCKSIZE,
+            )
+        };
+
+        if result != rarchive_sys::ARCHIVE_OK {
+            Err(unsafe { Error::from_read_archive(self) })
+        } else {
+            Ok(())
+        }
     }
 }
 
