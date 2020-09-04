@@ -1,76 +1,16 @@
 use std::{env, path::PathBuf};
 
 fn main() {
-    let host = env::var("HOST").unwrap();
-    let target = env::var("TARGET").unwrap();
-
-    let host_and_target_contain = |s| host.contains(s) && target.contains(s);
-
     let static_link = cfg!(feature = "static");
 
-    if !static_link
-        && !target.contains("msvc")
-        && !(host_and_target_contain("apple")
-            || host_and_target_contain("freebsd")
-            || host_and_target_contain("dragonfly"))
-    {
-        let libarchive = pkg_config::Config::new()
-            .cargo_metadata(true)
-            .print_system_libs(false)
-            .probe("libarchive");
-        if libarchive.is_ok() {
-            // libarchive is installed, so link it
-            // and generate bindings.
-            println!("cargo:rustc-link-lib=archive");
-            return generate_bindings();
-        }
-    }
+    pkg_config::Config::new()
+        .statik(static_link)
+        .cargo_metadata(true)
+        .print_system_libs(false)
+        .probe("libarchive")
+        .expect("failed to find libarchive");
 
-    if target.contains("msvc") && try_vcpkg() {
-        return generate_bindings();
-    }
-
-    // Build libarchive from source and statically link it.
-    if target.contains("msvc")
-        || target.contains("pc-windows-gnu")
-        || static_link
-        || target != host
-        || target.contains("musl")
-    {
-        // Build libarchive and generate the rust bindings using bindgen.
-        build_source();
-        return generate_bindings();
-    }
-
-    panic!("unable to link libarchive");
-}
-
-fn build_source() {
-    let dst = cmake::Config::new("src/libarchive")
-        .define("ENABLE_CPIO", "false")
-        .define("ENABLE_TAR", "false")
-        .define("ENABLE_CAT", "false")
-        .define("ENABLE_TEST", "false")
-        .build();
-
-    println!("cargo:rustc-link-search=native={}", dst.display());
-    println!("cargo:rustc-link-lib=static=archive");
-}
-
-#[cfg(not(target_env = "msvc"))]
-fn try_vcpkg() -> bool {
-    false
-}
-
-#[cfg(target_env = "msvc")]
-fn try_vcpkg() -> bool {
-    match vcpkg::Config::new().emit_includes(true).probe("libarchive") {
-        Ok(_) => true,
-        Err(e) => {
-            println!("note, vcpkg did not find libarchive: {}", e);
-            false
-        }
-    }
+    generate_bindings();
 }
 
 fn generate_bindings() {
