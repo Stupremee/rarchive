@@ -1,4 +1,4 @@
-use crate::{Archive, Error, Filter, Format, Result};
+use crate::{entry::Entry, Archive, Error, Filter, Format, Result};
 use rarchive_sys::archive;
 use std::{ffi::CString, path::Path};
 
@@ -19,6 +19,11 @@ impl ReadArchive {
         // to allocate memory.
         assert!(!inner.is_null());
         Self { inner }
+    }
+
+    /// Returns an iterator over all entries of this archive.
+    pub fn entries(&mut self) -> Entries<'_> {
+        Entries { archive: self }
     }
 }
 
@@ -45,10 +50,10 @@ impl Archive for ReadArchive {
             )
         };
 
-        if result != rarchive_sys::ARCHIVE_OK {
-            Err(unsafe { Error::from_archive(self) })
-        } else {
+        if result == rarchive_sys::ARCHIVE_OK {
             Ok(())
+        } else {
+            Err(unsafe { Error::from_archive(self) })
         }
     }
 
@@ -99,6 +104,29 @@ impl Drop for ReadArchive {
     fn drop(&mut self) {
         unsafe {
             rarchive_sys::archive_read_free(self.inner);
+        }
+    }
+}
+
+/// An iterator over the entries of an archive.
+pub struct Entries<'archive> {
+    archive: &'archive ReadArchive,
+}
+
+impl<'archive> Iterator for Entries<'archive> {
+    type Item = Entry<'archive>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let entry = Entry::new();
+        let entry_ptr = entry.as_mut_ptr();
+
+        let result = unsafe {
+            rarchive_sys::archive_read_next_header2(self.archive.as_mut_ptr(), entry_ptr)
+        };
+        if result == rarchive_sys::ARCHIVE_OK {
+            Some(entry)
+        } else {
+            None
         }
     }
 }
