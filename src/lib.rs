@@ -3,6 +3,8 @@
 // #![deny(missing_docs)]
 #![warn(clippy::pedantic)]
 
+pub mod entry;
+
 mod archive_read;
 pub use archive_read::*;
 
