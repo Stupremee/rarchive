@@ -1,4 +1,4 @@
-use crate::{Error, Filter, Format, Result};
+use crate::{Archive, Error, Filter, Format, Result};
 use rarchive_sys::archive;
 use std::{ffi::CString, path::Path};
 
@@ -20,35 +20,39 @@ impl ReadArchive {
         assert!(!inner.is_null());
         Self { inner }
     }
+}
 
-    /// Enables the given [`Filter`] for this `ReadArchive`.
-    ///
-    /// [`Filter`]: ../struct.Filter.html
-    pub fn support_filter(&mut self, filter: Filter) {
-        let action = match filter {
-            Filter::All => rarchive_sys::archive_read_support_filter_all,
-            Filter::None => rarchive_sys::archive_read_support_filter_none,
-            Filter::Bzip2 => rarchive_sys::archive_read_support_filter_bzip2,
-            Filter::Compress => rarchive_sys::archive_read_support_filter_compress,
-            Filter::Grzip => rarchive_sys::archive_read_support_filter_grzip,
-            Filter::Gzip => rarchive_sys::archive_read_support_filter_gzip,
-            Filter::Lrzip => rarchive_sys::archive_read_support_filter_lrzip,
-            Filter::Lz4 => rarchive_sys::archive_read_support_filter_lz4,
-            Filter::Lzma => rarchive_sys::archive_read_support_filter_lzma,
-            Filter::Lzop => rarchive_sys::archive_read_support_filter_lzop,
-            Filter::Rpm => rarchive_sys::archive_read_support_filter_rpm,
-            Filter::Uu => rarchive_sys::archive_read_support_filter_uu,
-            Filter::Xz => rarchive_sys::archive_read_support_filter_xz,
-            Filter::Zstd => rarchive_sys::archive_read_support_filter_zstd,
-        };
-
-        unsafe { action(self.inner) };
+impl Archive for ReadArchive {
+    fn as_ptr(&self) -> *const rarchive_sys::archive {
+        self.inner
     }
 
-    /// Enables the given [`Format`] for this `ReadArchive`.
-    ///
-    /// [`Format`]: ../struct.Format.html
-    pub fn support_format(&mut self, format: Format) {
+    fn as_mut_ptr(&self) -> *mut rarchive_sys::archive {
+        self.inner
+    }
+
+    fn open<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+        const DEFAULT_BLOCKSIZE: u64 = 10240;
+
+        let path = path.as_ref().to_str().expect("path has to be valid utf-8");
+        let raw_path = CString::new(path).expect("failed to create path");
+
+        let result = unsafe {
+            rarchive_sys::archive_read_open_filename(
+                self.inner,
+                raw_path.as_ptr(),
+                DEFAULT_BLOCKSIZE,
+            )
+        };
+
+        if result != rarchive_sys::ARCHIVE_OK {
+            Err(unsafe { Error::from_archive(self) })
+        } else {
+            Ok(())
+        }
+    }
+
+    fn support_format(&mut self, format: Format) {
         let action = match format {
             Format::All => rarchive_sys::archive_read_support_format_all,
             Format::Empty => rarchive_sys::archive_read_support_format_empty,
@@ -69,28 +73,25 @@ impl ReadArchive {
         unsafe { action(self.inner) };
     }
 
-    /// Opens the given file for this archive.
-    ///
-    /// This method has to be called before any operation can be done.
-    pub fn open<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-        const DEFAULT_BLOCKSIZE: u64 = 10240;
-
-        let path = path.as_ref().to_str().expect("path has to be valid utf-8");
-        let raw_path = CString::new(path).expect("failed to create path");
-
-        let result = unsafe {
-            rarchive_sys::archive_read_open_filename(
-                self.inner,
-                raw_path.as_ptr(),
-                DEFAULT_BLOCKSIZE,
-            )
+    fn support_filter(&mut self, filter: Filter) {
+        let action = match filter {
+            Filter::All => rarchive_sys::archive_read_support_filter_all,
+            Filter::None => rarchive_sys::archive_read_support_filter_none,
+            Filter::Bzip2 => rarchive_sys::archive_read_support_filter_bzip2,
+            Filter::Compress => rarchive_sys::archive_read_support_filter_compress,
+            Filter::Grzip => rarchive_sys::archive_read_support_filter_grzip,
+            Filter::Gzip => rarchive_sys::archive_read_support_filter_gzip,
+            Filter::Lrzip => rarchive_sys::archive_read_support_filter_lrzip,
+            Filter::Lz4 => rarchive_sys::archive_read_support_filter_lz4,
+            Filter::Lzma => rarchive_sys::archive_read_support_filter_lzma,
+            Filter::Lzop => rarchive_sys::archive_read_support_filter_lzop,
+            Filter::Rpm => rarchive_sys::archive_read_support_filter_rpm,
+            Filter::Uu => rarchive_sys::archive_read_support_filter_uu,
+            Filter::Xz => rarchive_sys::archive_read_support_filter_xz,
+            Filter::Zstd => rarchive_sys::archive_read_support_filter_zstd,
         };
 
-        if result != rarchive_sys::ARCHIVE_OK {
-            Err(unsafe { Error::from_read_archive(self) })
-        } else {
-            Ok(())
-        }
+        unsafe { action(self.inner) };
     }
 }
 

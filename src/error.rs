@@ -1,4 +1,4 @@
-use crate::ReadArchive;
+use crate::Archive;
 use std::{ffi::CStr, fmt};
 
 /// The global result type.
@@ -14,9 +14,9 @@ pub struct Error {
 impl Error {
     /// Creates an `Error` by calling `archive_errno` and `archive_error_string`
     /// functions to retrieve error information.
-    pub(crate) unsafe fn from_read_archive(archive: &ReadArchive) -> Self {
-        let code = rarchive_sys::archive_errno(archive.inner);
-        let raw_msg = rarchive_sys::archive_error_string(archive.inner);
+    pub(crate) unsafe fn from_archive(archive: &impl Archive) -> Self {
+        let code = rarchive_sys::archive_errno(archive.as_mut_ptr());
+        let raw_msg = rarchive_sys::archive_error_string(archive.as_mut_ptr());
         let raw_msg = if raw_msg.is_null() {
             None
         } else {

@@ -12,6 +12,42 @@ pub use archive_write::*;
 pub mod error;
 pub use error::{Error, Result};
 
+use std::path::Path;
+
+/// Common trait that is implemented for [`ReadArchive`] and [`WriteArchive`]
+/// to provide common operations.
+///
+/// [`ReadArchive`]: ./struct.ReadArchive.html
+/// [`WriteArchive`]: ./struct.WriteArchive.html
+pub trait Archive {
+    /// Returns a pointer to the underlying raw archive.
+    ///
+    /// The resulting pointer then can be used with the
+    /// raw libarchive bindings provided by `rarchive_sys`.
+    fn as_ptr(&self) -> *const rarchive_sys::archive;
+
+    /// Returns a mutable pointer to the underlying raw archive.
+    ///
+    /// The resulting pointer then can be used with the
+    /// raw libarchive bindings provided by `rarchive_sys`.
+    fn as_mut_ptr(&self) -> *mut rarchive_sys::archive;
+
+    /// Opens the given file for this archive.
+    ///
+    /// This method has to be called before any operation can be done.
+    fn open<P: AsRef<Path>>(&mut self, path: P) -> Result<()>;
+
+    /// Enables the given [`Format`] for this `Archive`.
+    ///
+    /// [`Format`]: ../struct.Format.html
+    fn support_format(&mut self, format: Format);
+
+    /// Enables the given [`Filter`] for this `Archive`.
+    ///
+    /// [`Filter`]: ../struct.Filter.html
+    fn support_filter(&mut self, filter: Filter);
+}
+
 /// Representing every possible filter that is available to read / write
 /// from / to.
 ///
