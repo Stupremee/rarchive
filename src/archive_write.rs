@@ -1,9 +1,10 @@
 use rarchive_sys::archive;
+use std::ptr::NonNull;
 
 /// The `WriteArchive` is used to read entries from an archive.
 #[derive(Debug, Clone)]
 pub struct WriteArchive {
-    inner: *mut archive,
+    inner: NonNull<archive>,
 }
 
 impl WriteArchive {
@@ -13,9 +14,7 @@ impl WriteArchive {
     /// [`WriteArchive`]: ./struct.WriteArchive.html
     pub fn new() -> Self {
         let inner: *mut archive = unsafe { rarchive_sys::archive_write_new() };
-        // This can only fail if the `archive_read_new` method failed
-        // to allocate memory.
-        assert!(!inner.is_null());
+        let inner = NonNull::new(inner).expect("failed to create WriteArchive");
         Self { inner }
     }
 }
@@ -23,7 +22,7 @@ impl WriteArchive {
 impl Drop for WriteArchive {
     fn drop(&mut self) {
         unsafe {
-            rarchive_sys::archive_write_free(self.inner);
+            rarchive_sys::archive_write_free(self.inner.as_ptr());
         }
     }
 }

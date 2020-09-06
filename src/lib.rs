@@ -26,7 +26,9 @@ pub trait Archive {
     ///
     /// The resulting pointer then can be used with the
     /// raw libarchive bindings provided by `rarchive_sys`.
-    fn as_ptr(&self) -> *const rarchive_sys::archive;
+    fn as_ptr(&self) -> *const rarchive_sys::archive {
+        self.as_mut_ptr() as *const _
+    }
 
     /// Returns a mutable pointer to the underlying raw archive.
     ///

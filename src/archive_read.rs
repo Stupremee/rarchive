@@ -1,11 +1,11 @@
 use crate::{entry::Entry, Archive, Error, Filter, Format, Result};
 use rarchive_sys::archive;
-use std::{ffi::CString, path::Path};
+use std::{ffi::CString, path::Path, ptr::NonNull};
 
 /// The `ReadArchive` is used to read entries from an archive.
 #[derive(Debug, Clone)]
 pub struct ReadArchive {
-    pub(crate) inner: *mut archive,
+    pub(crate) inner: NonNull<archive>,
 }
 
 impl ReadArchive {
@@ -15,9 +15,7 @@ impl ReadArchive {
     /// [`ReadArchive`]: ./struct.ReadArchive.html
     pub fn new() -> Self {
         let inner: *mut archive = unsafe { rarchive_sys::archive_read_new() };
-        // This can only fail if the `archive_read_new` method failed
-        // to allocate memory.
-        assert!(!inner.is_null());
+        let inner = NonNull::new(inner).expect("failed to create ReadArchive");
         Self { inner }
     }
 
@@ -28,12 +26,8 @@ impl ReadArchive {
 }
 
 impl Archive for ReadArchive {
-    fn as_ptr(&self) -> *const rarchive_sys::archive {
-        self.inner
-    }
-
     fn as_mut_ptr(&self) -> *mut rarchive_sys::archive {
-        self.inner
+        self.inner.as_ptr()
     }
 
     fn open<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
@@ -44,7 +38,7 @@ impl Archive for ReadArchive {
 
         let result = unsafe {
             rarchive_sys::archive_read_open_filename(
-                self.inner,
+                self.as_mut_ptr(),
                 raw_path.as_ptr(),
                 DEFAULT_BLOCKSIZE,
             )
@@ -75,7 +69,7 @@ impl Archive for ReadArchive {
             Format::Zip => rarchive_sys::archive_read_support_format_zip,
         };
 
-        unsafe { action(self.inner) };
+        unsafe { action(self.as_mut_ptr()) };
     }
 
     fn support_filter(&mut self, filter: Filter) {
@@ -96,14 +90,14 @@ impl Archive for ReadArchive {
             Filter::Zstd => rarchive_sys::archive_read_support_filter_zstd,
         };
 
-        unsafe { action(self.inner) };
+        unsafe { action(self.as_mut_ptr()) };
     }
 }
 
 impl Drop for ReadArchive {
     fn drop(&mut self) {
         unsafe {
-            rarchive_sys::archive_read_free(self.inner);
+            rarchive_sys::archive_read_free(self.as_mut_ptr());
         }
     }
 }
