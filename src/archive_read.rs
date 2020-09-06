@@ -19,6 +19,16 @@ impl ReadArchive {
         Self { inner }
     }
 
+    /// Creates a new [`ReadArchive`], enables all filters and formats,
+    /// and then opens the given file, returning the created archive.
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let mut archive = ReadArchive::new();
+        archive.support_format(Format::All);
+        archive.support_filter(Filter::All);
+        archive.open(path)?;
+        Ok(archive)
+    }
+
     /// Returns an iterator over all entries of this archive.
     pub fn entries(&mut self) -> Entries<'_> {
         Entries { archive: self }
