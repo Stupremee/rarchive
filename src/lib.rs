@@ -28,13 +28,48 @@ pub trait Archive {
 
     /// Enables the given [`Format`] for this `Archive`.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if one of the support operations fail.
+    /// It will not throw an error, if `ARCHIE_WARN` was returned by libarchive.
+    /// If you try to support [`Format::All`], `Ok(())` will always be returned.
+    ///
     /// [`Format`]: ../struct.Format.html
-    fn support_format(&mut self, format: Format);
+    /// [`Format::All`]: ../struct.Format.html#All
+    fn support_format(&mut self, format: Format) -> Result<()>;
 
     /// Enables the given [`Filter`] for this `Archive`.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if one of the support operations fail.
+    /// It will not throw an error, if `ARCHIE_WARN` was returned by libarchive.
+    /// If you try to support [`Filter::All`], `Ok(())` will always be returned.
+    ///
     /// [`Filter`]: ../struct.Filter.html
-    fn support_filter(&mut self, filter: Filter);
+    /// [`Filter::All`]: ../struct.Filter.html#All
+    fn support_filter(&mut self, filter: Filter) -> Result<()>;
+
+    /// Specifies an option that will be passed to a current-registered filter.
+    ///
+    /// See `archive_read_set_options(3)` manpage for more information.
+    fn set_filter_option(&mut self, module: &str, option: &str, value: &str) -> Result<()>;
+
+    /// Specifies an option that will be passed to a current-registered format.
+    ///
+    /// See `archive_read_set_options(3)` manpage for more information.
+    fn set_format_option(&mut self, module: &str, option: &str, value: &str) -> Result<()>;
+
+    /// Calls [`set_format_option`] and then [`set_filter_option`].
+    ///
+    /// See `archive_read_set_options(3)` manpage for more information.
+    fn set_option(&mut self, module: &str, option: &str, value: &str) -> Result<()>;
+
+    /// `options` is a comma-separated list of options, which will
+    /// all be passed to `set_option`.
+    ///
+    /// See `archive_read_set_options(3)` manpage for more information.
+    fn set_options(&mut self, options: &str) -> Result<()>;
 }
 
 /// Representing every possible filter that is available to read / write

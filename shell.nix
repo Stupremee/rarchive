@@ -8,6 +8,7 @@ pkgs.mkShell {
     bzip2
     zlib
     lzma
+    valgrind
   ];
   shellHook = ''
     export LIBCLANG_PATH="${llvmPackages.libclang}/lib"

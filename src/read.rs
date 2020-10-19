@@ -1,3 +1,4 @@
+use crate::{Archive, Error, Filter, Format, Result};
 use rarchive_sys::archive;
 use std::ptr::NonNull;
 
@@ -17,5 +18,122 @@ impl ReadArchive {
         let inner = unsafe { rarchive_sys::archive_read_new() };
         let inner = NonNull::new(inner).expect("failed to create ReadArchive object");
         Self { inner }
+    }
+}
+
+impl Archive for ReadArchive {
+    fn as_mut_ptr(&self) -> *mut rarchive_sys::archive {
+        self.inner.as_ptr()
+    }
+
+    fn support_format(&mut self, format: Format) -> Result<()> {
+        let action = match format {
+            Format::All => rarchive_sys::archive_read_support_format_all,
+            Format::Empty => rarchive_sys::archive_read_support_format_empty,
+            Format::SevenZip => rarchive_sys::archive_read_support_format_7zip,
+            Format::Ar => rarchive_sys::archive_read_support_format_ar,
+            Format::Cab => rarchive_sys::archive_read_support_format_cab,
+            Format::Cpio => rarchive_sys::archive_read_support_format_cpio,
+            Format::Iso9660 => rarchive_sys::archive_read_support_format_iso9660,
+            Format::Lha => rarchive_sys::archive_read_support_format_lha,
+            Format::Mtree => rarchive_sys::archive_read_support_format_mtree,
+            Format::Rar => rarchive_sys::archive_read_support_format_rar,
+            Format::Tar => rarchive_sys::archive_read_support_format_tar,
+            Format::Xar => rarchive_sys::archive_read_support_format_xar,
+            Format::Zip => rarchive_sys::archive_read_support_format_zip,
+        };
+
+        Error::from_code(self, || unsafe { action(self.as_mut_ptr()) })
+    }
+
+    fn support_filter(&mut self, filter: Filter) -> Result<()> {
+        let action = match filter {
+            Filter::All => rarchive_sys::archive_read_support_filter_all,
+            Filter::None => rarchive_sys::archive_read_support_filter_none,
+            Filter::Bzip2 => rarchive_sys::archive_read_support_filter_bzip2,
+            Filter::Compress => rarchive_sys::archive_read_support_filter_compress,
+            Filter::Grzip => rarchive_sys::archive_read_support_filter_grzip,
+            Filter::Gzip => rarchive_sys::archive_read_support_filter_gzip,
+            Filter::Lrzip => rarchive_sys::archive_read_support_filter_lrzip,
+            Filter::Lz4 => rarchive_sys::archive_read_support_filter_lz4,
+            Filter::Lzma => rarchive_sys::archive_read_support_filter_lzma,
+            Filter::Lzop => rarchive_sys::archive_read_support_filter_lzop,
+            Filter::Rpm => rarchive_sys::archive_read_support_filter_rpm,
+            Filter::Uu => rarchive_sys::archive_read_support_filter_uu,
+            Filter::Xz => rarchive_sys::archive_read_support_filter_xz,
+            Filter::Zstd => rarchive_sys::archive_read_support_filter_zstd,
+        };
+
+        Error::from_code(self, || unsafe { action(self.as_mut_ptr()) })
+    }
+
+    fn set_filter_option(&mut self, module: &str, option: &str, value: &str) -> Result<()> {
+        Error::from_code(self, || unsafe {
+            rarchive_sys::archive_read_set_filter_option(
+                self.as_mut_ptr(),
+                module.as_ptr() as _,
+                option.as_ptr() as _,
+                value.as_ptr() as _,
+            )
+        })
+    }
+
+    fn set_format_option(&mut self, module: &str, option: &str, value: &str) -> Result<()> {
+        Error::from_code(self, || unsafe {
+            rarchive_sys::archive_read_set_format_option(
+                self.as_mut_ptr(),
+                module.as_ptr() as _,
+                option.as_ptr() as _,
+                value.as_ptr() as _,
+            )
+        })
+    }
+
+    fn set_option(&mut self, module: &str, option: &str, value: &str) -> Result<()> {
+        Error::from_code(self, || unsafe {
+            rarchive_sys::archive_read_set_option(
+                self.as_mut_ptr(),
+                module.as_ptr() as _,
+                option.as_ptr() as _,
+                value.as_ptr() as _,
+            )
+        })
+    }
+
+    fn set_options(&mut self, options: &str) -> Result<()> {
+        Error::from_code(self, || unsafe {
+            rarchive_sys::archive_read_set_options(self.as_mut_ptr(), options.as_ptr() as _)
+        })
+    }
+}
+
+impl Drop for ReadArchive {
+    fn drop(&mut self) {
+        unsafe {
+            rarchive_sys::archive_read_free(self.as_mut_ptr());
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_archive() {
+        let _a1 = ReadArchive::new();
+    }
+
+    #[test]
+    fn support_filter_format() {
+        let mut a = ReadArchive::new();
+        a.support_filter(Filter::All).unwrap();
+        a.support_format(Format::All).unwrap();
+    }
+
+    #[test]
+    fn set_option() {
+        let mut a = ReadArchive::new();
+        assert!(a.set_options("invalid").is_err());
     }
 }

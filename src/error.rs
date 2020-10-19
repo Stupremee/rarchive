@@ -12,6 +12,19 @@ pub struct Error {
 }
 
 impl Error {
+    /// Calls the given function and checks the returned code if it's an error.
+    pub(crate) fn from_code(
+        archive: &dyn Archive,
+        func: impl FnOnce() -> std::os::raw::c_int,
+    ) -> Result<()> {
+        let result = func();
+        if result != rarchive_sys::ARCHIVE_OK && result != rarchive_sys::ARCHIVE_WARN {
+            Err(unsafe { Self::from_archive(archive) })
+        } else {
+            Ok(())
+        }
+    }
+
     /// Creates an `Error` by calling `archive_errno` and `archive_error_string`
     /// functions to retrieve error information.
     pub(crate) unsafe fn from_archive(archive: &dyn Archive) -> Self {
