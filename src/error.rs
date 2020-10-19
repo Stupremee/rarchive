@@ -14,7 +14,7 @@ pub struct Error {
 impl Error {
     /// Creates an `Error` by calling `archive_errno` and `archive_error_string`
     /// functions to retrieve error information.
-    pub(crate) unsafe fn from_archive(archive: &impl Archive) -> Self {
+    pub(crate) unsafe fn from_archive(archive: &dyn Archive) -> Self {
         let code = rarchive_sys::archive_errno(archive.as_mut_ptr());
         let raw_msg = rarchive_sys::archive_error_string(archive.as_mut_ptr());
         let raw_msg = if raw_msg.is_null() {

@@ -1,20 +1,10 @@
 #![deny(rust_2018_idioms)]
-// TODO: Uncomment this
-// #![deny(missing_docs)]
 #![warn(clippy::pedantic)]
-
-pub mod entry;
-
-mod archive_read;
-pub use archive_read::*;
-
-mod archive_write;
-pub use archive_write::*;
 
 pub mod error;
 pub use error::{Error, Result};
 
-use std::path::Path;
+pub mod read;
 
 /// Common trait that is implemented for [`ReadArchive`] and [`WriteArchive`]
 /// to provide common operations.
@@ -35,11 +25,6 @@ pub trait Archive {
     /// The resulting pointer then can be used with the
     /// raw libarchive bindings provided by `rarchive_sys`.
     fn as_mut_ptr(&self) -> *mut rarchive_sys::archive;
-
-    /// Opens the given file for this archive.
-    ///
-    /// This method has to be called before any operation can be done.
-    fn open<P: AsRef<Path>>(&mut self, path: P) -> Result<()>;
 
     /// Enables the given [`Format`] for this `Archive`.
     ///
@@ -81,6 +66,7 @@ pub enum Filter {
 /// Representing every possible format that is available to read / write
 /// from / to.
 pub enum Format {
+    // TODO: Properly support raw format
     /// Enable all available formats.
     All,
     /// Enable the `empty` format, which is just a format,
@@ -99,7 +85,6 @@ pub enum Format {
     Lha,
     Mtree,
     Rar,
-    Raw,
     Tar,
     Xar,
     Zip,
