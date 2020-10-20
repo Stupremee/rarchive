@@ -4,6 +4,19 @@ use std::{ffi::CStr, fmt};
 /// The global result type.
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
+/// Error that can be either a normal libarchive [`Error`], or an
+/// [`Rust I/O`] error.
+///
+/// [`Error`]: ./struct.Error.html
+/// [`Rust I/O`]: https://doc.rust-lang.org/std/io/struct.Error.html
+#[derive(Debug, thiserror::Error)]
+pub enum ErrorOrIo {
+    #[error("archive error: {0}")]
+    Libarchive(#[from] Error),
+    #[error("i/o error: {0}")]
+    Io(#[from] std::io::Error),
+}
+
 /// The central error type that is used for all operations that can fail.
 #[derive(Debug)]
 pub struct Error {
@@ -62,3 +75,5 @@ impl fmt::Display for Error {
         }
     }
 }
+
+impl std::error::Error for Error {}

@@ -1,6 +1,6 @@
-use crate::{Archive, Error, Filter, Format, Result};
+use crate::{Archive, Error, ErrorOrIo, Filter, Format, Result};
 use rarchive_sys::archive;
-use std::ptr::NonNull;
+use std::{path::Path, ptr::NonNull};
 
 /// `ReadArchive` is used to read an archive.
 pub struct ReadArchive {
@@ -8,6 +8,16 @@ pub struct ReadArchive {
 }
 
 impl ReadArchive {
+    /// Creates a new archive, add all filters and formats, and then tries
+    /// to open the file.
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, ErrorOrIo> {
+        let mut archive = Self::new();
+        let _ = archive.support_format(Format::All);
+        let _ = archive.support_filter(Filter::All);
+        archive.open(path)?;
+        Ok(archive)
+    }
+
     /// Builds a new `ReadArchive` object.
     ///
     /// # Panics
@@ -18,6 +28,26 @@ impl ReadArchive {
         let inner = unsafe { rarchive_sys::archive_read_new() };
         let inner = NonNull::new(inner).expect("failed to create ReadArchive object");
         Self { inner }
+    }
+
+    /// Tries to open an archive by reading the data from a file.
+    pub fn open<P: AsRef<Path>>(&mut self, path: P) -> Result<(), ErrorOrIo> {
+        let buf = std::fs::read(path)?;
+        self.open_buffer(buf.as_slice())?;
+        Ok(())
+    }
+
+    /// Tries to open an archive by reading the data from a raw byte buffer.
+    pub fn open_buffer<Buf: AsRef<[u8]>>(&mut self, buf: Buf) -> Result<()> {
+        let buf = buf.as_ref();
+
+        Error::from_code(self, || unsafe {
+            rarchive_sys::archive_read_open_memory(
+                self.as_mut_ptr(),
+                buf.as_ptr() as _,
+                buf.len() as u64,
+            )
+        })
     }
 }
 
@@ -135,5 +165,18 @@ mod tests {
     fn set_option() {
         let mut a = ReadArchive::new();
         assert!(a.set_options("invalid").is_err());
+    }
+
+    #[test]
+    fn open_buf() {
+        let mut a = ReadArchive::new();
+        a.support_format(Format::All).unwrap();
+        assert!(a.open_buffer([0u8]).is_err());
+    }
+
+    #[test]
+    fn open_path() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/empty.zip");
+        let _a = ReadArchive::from_path(path).unwrap();
     }
 }

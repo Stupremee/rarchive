@@ -10,3 +10,4 @@ members = ["rarchive-sys"]
 
 [dependencies]
 rarchive-sys = { path = "./rarchive-sys", features = ["static"] }
+thiserror = "1"

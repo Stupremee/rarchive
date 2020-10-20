@@ -2,7 +2,7 @@
 #![warn(clippy::pedantic)]
 
 pub mod error;
-pub use error::{Error, Result};
+pub use error::{Error, ErrorOrIo, Result};
 
 pub mod read;
 
